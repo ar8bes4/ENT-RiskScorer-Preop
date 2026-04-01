@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENT-RiskScorer: 頭頸部外科術前リスク評価ツール</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 1.875rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-sub);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--bg);
+            color: var(--primary);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .checkbox-item input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Results Display */
+        .results-panel {
+            position: sticky;
+            top: 20px;
+        }
+
+        .score-display {
+            margin-bottom: 12px;
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .score-label {
+            font-size: 0.875rem;
+            color: var(--text-sub);
+        }
+
+        .score-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .risk-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .risk-low { background: #d1fae5; color: #065f46; }
+        .risk-mid { background: #fef3c7; color: #92400e; }
+        .risk-high { background: #fee2e2; color: #991b1b; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .summary-box {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-nav {
+            display: flex;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 0.875rem;
+            color: var(--text-sub);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .info-tip {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ENT-RiskScorer</h1>
+        <p>頭頸部外科 術前リスク評価計算ツール</p>
+    </header>
+
+    <div class="main-layout">
+        <!-- Input Section -->
+        <main>
+            <div class="card">
+                <h2>基本パラメータ</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-group">
+                        <label>年齢 (Age)</label>
+                        <input type="number" id="age" value="65" oninput="calcAll()">
+                    </div>
+                    <div class="input-group">
+                        <label>性別 (Sex)</label>
+                        <select id="sex" onchange="calcAll()">
+                            <option value="female">女性</option>
+                            <option value="male" selected>男性</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-group">
+                        <label>ASA-PS</label>
+                        <select id="asa" onchange="calcAll()">
+                            <option value="1">ASA 1: 健康</option>
+                            <option value="2">ASA 2: 軽微な全身疾患</option>
+                            <option value="3" selected>ASA 3: 重症の全身疾患</option>
+                            <option value="4">ASA 4: 生命を脅かす重症疾患</option>
+                            <option value="5">ASA 5: 瀕死状態</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>機能状態 (Functional Status)</label>
+                        <select id="functional" onchange="calcAll()">
+                            <option value="independent">自立 (Independent)</option>
+                            <option value="partially">一部介助 (Partially Dependent)</option>
+                            <option value="totally">全介助 (Totally Dependent)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-nav">
+                <div class="tab-btn active" onclick="showTab('cardio')">心血管系 (Cardiac)</div>
+                <div class="tab-btn" onclick="showTab('resp')">呼吸器系 (Resp)</div>
+                <div class="tab-btn" onclick="showTab('hn')">頭頸部・全身 (H&N/CCI)</div>
+            </div>
+
+            <!-- Cardiovascular Tab -->
+            <div id="cardio" class="tab-content active">
+                <div class="card">
+                    <h2>RCRI (Lee Index)</h2>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 高リスク手術 (Intrathoracic, Supra-inguinal vascular, etc.)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 虚血性心疾患の既往</label>
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 心不全の既往</label>
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 脳血管障害の既往</label>
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 術前インスリン治療中の糖尿病</label>
+                        <label class="checkbox-item"><input type="checkbox" class="rcri" value="1" onchange="calcAll()"> 術前クレアチニン > 2.0 mg/dL</label>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>MICA (Gupta) 追加項目</h2>
+                    <div class="input-group">
+                        <label class="checkbox-item"><input type="checkbox" id="cr_15" onchange="calcAll()"> 術前クレアチニン > 1.5 mg/dL</label>
+                    </div>
+                    <div class="input-group">
+                        <label>手術の種類 (Type of Surgery)</label>
+                        <select id="mica_op" onchange="calcAll()">
+                            <option value="0.02" selected>ENT (耳鼻咽喉科)</option>
+                            <option value="1.6">Aortic (大動脈)</option>
+                            <option value="0.55">Vascular (血管系)</option>
+                            <option value="0.9">Thoracic (胸部)</option>
+                            <option value="0.4">Neurosurgery (脳神経)</option>
+                            <option value="0.14">General (一般外科)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Respiratory Tab -->
+            <div id="resp" class="tab-content">
+                <div class="card">
+                    <h2>ARISCAT Score</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <article class="input-group">
+                            <label>術前 SpO2 (%)</label>
+                            <select id="spo2" onchange="calcAll()">
+                                <option value="0">≥ 96%</option>
+                                <option value="8">91 - 95%</option>
+                                <option value="24">≤ 90%</option>
+                            </select>
+                        </article>
+                        <article class="input-group">
+                            <label>先行する呼吸器感染症 (1ヶ月以内)</label>
+                            <select id="resp_inf" onchange="calcAll()">
+                                <option value="0">なし</option>
+                                <option value="17">あり</option>
+                            </select>
+                        </article>
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" id="anemia" onchange="calcAll()"> 貧血 (Hb ≤ 10 g/dL)</label>
+                        <label class="checkbox-item"><input type="checkbox" id="emergency" onchange="calcAll()"> 緊急手術 (Emergency Case)</label>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div class="input-group">
+                            <label>切開部位 (Incision)</label>
+                            <select id="incision" onchange="calcAll()">
+                                <option value="0">末梢 (Peripheral / Neck)</option>
+                                <option value="15">上腹部 (Upper Abdominal)</option>
+                                <option value="24">胸部 (Intrathoracic)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>予定手術時間</label>
+                            <select id="op_duration" onchange="calcAll()">
+                                <option value="0">2時間未満</option>
+                                <option value="16">2 - 3時間</option>
+                                <option value="23">3時間以上</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Gupta PRF 追加項目</h2>
+                    <div class="input-group">
+                        <label>敗血症の有無 (Sepsis)</label>
+                        <select id="sepsis" onchange="calcAll()">
+                            <option value="-0.7840">なし (None)</option>
+                            <option value="0">SIRS</option>
+                            <option value="0.2752">敗血症 (Sepsis)</option>
+                            <option value="0.9035">敗血症性ショック</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Head & Neck Tab -->
+            <div id="hn" class="tab-content">
+                <div class="card">
+                    <h2>HNSRI (Mascarella) 追加項目</h2>
+                    <div class="checkbox-group" style="grid-template-columns: 1fr 1fr;">
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_ht" value="3" onchange="calcAll()"> 高血圧 (要加療)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_dyspnea" value="4" onchange="calcAll()"> 呼吸困難感</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_steroid" value="4" onchange="calcAll()"> ステロイド長期使用</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_bleeding" value="8" onchange="calcAll()"> 出血性疾患/抗凝固薬</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_smoking" value="5" onchange="calcAll()"> 喫煙中</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_wbc" value="5" onchange="calcAll()"> WBC > 11500</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_hct" value="10" onchange="calcAll()"> Hct < 35%</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_alb" value="5" onchange="calcAll()"> Alb < 3.5 g/dL</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_wtloss" value="7" onchange="calcAll()"> 半年で>10%の体重減少</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_freeflap" value="7" onchange="calcAll()"> 遊離皮弁再建予定</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hnsri" id="hnsri_trache" value="6" onchange="calcAll()"> 術中気管切開予定</label>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div class="input-group">
+                            <label>手術時間 (HNSRI用)</label>
+                            <select id="hnsri_optime" onchange="calcAll()">
+                                <option value="0">4時間未満</option>
+                                <option value="9">4 - 8時間</option>
+                                <option value="17">8時間以上</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>創部分類 (Wound Class)</label>
+                            <select id="hnsri_wound" onchange="calcAll()">
+                                <option value="0">Clean</option>
+                                <option value="5" selected>Clean-Contaminated</option>
+                                <option value="11">Contaminated</option>
+                                <option value="15">Dirty</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>HN-CCI (6項目版)</h2>
+                    <div class="checkbox-group" style="grid-template-columns: 1fr 1fr;">
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 心不全 (CHF)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 脳血管障害 (CVD)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 慢性肺疾患 (CPD)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 消化性潰瘍 (Ulcer)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 肝疾患 (Liver)</label>
+                        <label class="checkbox-item"><input type="checkbox" class="hncci" value="1" onchange="calcAll()"> 糖尿病 (DM)</label>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Side Panel: Results -->
+        <aside class="results-panel">
+            <div class="card">
+                <h2>計算結果</h2>
+                <div class="score-display">
+                    <div class="score-row">
+                        <span class="score-label">MICA Cardiac Risk</span>
+                        <span class="score-value" id="res_mica">- %</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="score-label">RCRI (Class)</span>
+                        <span class="score-value" id="res_rcri">-</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="score-label">Gupta PRF Prob</span>
+                        <span class="score-value" id="res_prf">- %</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="score-label">ARISCAT</span>
+                        <span class="score-value" id="res_ariscat">-</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="score-label">HNSRI Score</span>
+                        <span class="score-value" id="res_hnsri">0</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="score-label">HN-CCI Score</span>
+                        <span class="score-value" id="res_hncci">0</span>
+                    </div>
+                </div>
+                
+                <h3 style="font-size: 0.8rem; margin: 15px 0 5px;">貼り付け用サマリー</h3>
+                <div class="summary-box" id="summary_txt">準備中...</div>
+                
+                <button class="btn" onclick="copySummary()">サマリーをコピー</button>
+            </div>
+            <p class="info-tip">
+                ※Gupta MICA/PRFは、原著のロジスティック回帰定数を用いて確率を算出しています。
+            </p>
+        </aside>
+    </div>
+</div>
+
+<script>
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function calcAll() {
+        const age = parseInt(document.getElementById('age').value) || 0;
+        const asa = parseInt(document.getElementById('asa').value);
+        const functional = document.getElementById('functional').value;
+        
+        // --- 1. MICA (Gupta Cardiology) ---
+        // Constant: -5.25
+        // Age: 0.02
+        // Functional: indep:0, partial:0.65, total:1.03
+        // ASA: 1: -5.17, 2: -3.29, 3: -1.92, 4: -0.95, 5: -0.46
+        const mica_asa_coeffs = {1:-5.17, 2:-3.29, 3:-1.92, 4:-0.95, 5:-0.46};
+        const mica_func_coeffs = {independent:0, partially:0.65, totally:1.03};
+        let mica_x = -5.25 + (0.02 * age) + mica_func_coeffs[functional] + mica_asa_coeffs[asa] + parseFloat(document.getElementById('mica_op').value);
+        if(document.getElementById('cr_15').checked) mica_x += 0.61;
+        const mica_prob = (1 / (1 + Math.exp(-mica_x))) * 100;
+        document.getElementById('res_mica').innerText = mica_prob.toFixed(2) + "%";
+
+        // --- 2. RCRI (Lee) ---
+        let rcri_score = 0;
+        document.querySelectorAll('.rcri:checked').forEach(() => rcri_score++);
+        let rcri_class = "I (0.4%)";
+        if(rcri_score === 1) rcri_class = "II (0.9%)";
+        else if(rcri_score === 2) rcri_class = "III (6.6%)";
+        else if(rcri_score >= 3) rcri_class = "IV (11.0%)";
+        document.getElementById('res_rcri').innerText = rcri_score + " pts (Class " + rcri_class + ")";
+
+        // --- 3. Gupta PRF (Respiratory) ---
+        // Constant: -1.7397
+        // Functional: indep:0, partial:0.7678, total:1.4046
+        // ASA: 1:-3.5265, 2:-2.0008, 3:-0.6201, 4:0.2441, 5:0
+        // Sepsis: none:-0.784, SIRS:0, Sepsis:0.2752, Shock:0.9035
+        // Emergency: No:-0.5739, Yes:0
+        const prf_asa_coeffs = {1:-3.5265, 2:-2.0008, 3:-0.6201, 4:0.2441, 5:0};
+        const prf_func_coeffs = {independent:0, partially:0.7678, totally:1.4046};
+        let prf_x = -1.7397 + prf_func_coeffs[functional] + prf_asa_coeffs[asa] + parseFloat(document.getElementById('sepsis').value) + 0.1060; // ENT op fixed
+        if(!document.getElementById('emergency').checked) prf_x += -0.5739;
+        const prf_prob = (1 / (1 + Math.exp(-prf_x))) * 100;
+        document.getElementById('res_prf').innerText = prf_prob.toFixed(2) + "%";
+
+        // --- 4. ARISCAT ---
+        let aris_score = 0;
+        if(age > 50 && age <= 80) aris_score += 3;
+        else if(age > 80) aris_score += 16;
+        aris_score += parseInt(document.getElementById('spo2').value);
+        aris_score += parseInt(document.getElementById('resp_inf').value);
+        aris_score += parseInt(document.getElementById('incision').value);
+        aris_score += parseInt(document.getElementById('op_duration').value);
+        if(document.getElementById('anemia').checked) aris_score += 11;
+        if(document.getElementById('emergency').checked) aris_score += 8;
+        
+        let aris_risk = "Low (1.6%)";
+        if(aris_score >= 26 && aris_score <= 44) aris_risk = "Intermediate (13.3%)";
+        else if(aris_score > 44) aris_risk = "High (42.1%)";
+        document.getElementById('res_ariscat').innerText = aris_score + " pts (" + aris_risk + ")";
+
+        // --- 5. HNSRI ---
+        let hnsri_score = 0;
+        if(age >= 50 && age < 60) hnsri_score += 1;
+        else if(age >= 60 && age < 70) hnsri_score += 3;
+        else if(age >= 70 && age < 80) hnsri_score += 4;
+        else if(age >= 80 && age < 90) hnsri_score += 4;
+        else if(age >= 90) hnsri_score += 11;
+        if(document.getElementById('sex').value === 'male') hnsri_score += 3;
+        document.querySelectorAll('.hnsri:checked').forEach(c => hnsri_score += parseInt(c.value));
+        hnsri_score += parseInt(document.getElementById('hnsri_optime').value);
+        hnsri_score += parseInt(document.getElementById('hnsri_wound').value);
+        if(functional !== 'independent') hnsri_score += 6;
+        document.getElementById('res_hnsri').innerText = hnsri_score;
+
+        // --- 6. HN-CCI ---
+        let hncci_score = 0;
+        document.querySelectorAll('.hncci:checked').forEach(() => hncci_score++);
+        document.getElementById('res_hncci').innerText = hncci_score;
+
+        updateSummary(mica_prob, rcri_score, rcri_class, prf_prob, aris_score, aris_risk, hnsri_score, hncci_score);
+    }
+
+    function updateSummary(mica, rcri, rcri_cl, prf, aris, aris_cl, hnsri, hncci) {
+        const age = document.getElementById('age').value;
+        const asa = document.getElementById('asa').value;
+        const txt = `【術前リスク評価サマリー】
+年齢: ${age}歳  ASA-PS: Class ${asa}
+-------------------------------------
+▼心血管系リスク
+  ・MICA (Gupta): ${mica.toFixed(2)}% (MI/Cardiac Arrest)
+  ・RCRI (Lee): ${rcri} pts (Class ${rcri_cl})
+
+▼呼吸器系リスク
+  ・Gupta PRF: ${prf.toFixed(2)}% (Postop Resp Failure)
+  ・ARISCAT: ${aris} pts (${aris_cl})
+
+▼頭頸部外科/全身予後
+  ・HNSRI: ${hnsri} pts (30-day Major Adverse Event)
+  ・HN-CCI: ${hncci} pts (Comorbidity Index)
+-------------------------------------`;
+        document.getElementById('summary_txt').innerText = txt;
+    }
+
+    function copySummary() {
+        const text = document.getElementById('summary_txt').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector('.btn');
+            const original = btn.innerText;
+            btn.innerText = "コピーしました！";
+            btn.style.background = "var(--success)";
+            setTimeout(() => {
+                btn.innerText = original;
+                btn.style.background = "var(--primary)";
+            }, 2000);
+        });
+    }
+
+    // Initial calculation
+    calcAll();
+</script>
+
+</body>
+</html>
