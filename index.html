@@ -224,6 +224,14 @@
             color: var(--text-sub);
             margin-top: 4px;
         }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media print {
+            body { padding: 0; background: white; }
+            .main-layout { display: block; }
+            main, .btn { display: none; }
+            .results-panel { position: static; }
+            .summary-box { max-height: none; overflow: visible; }
+        }
     </style>
 </head>
 <body>
@@ -242,7 +250,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="input-group">
                         <label>年齢 (Age)</label>
-                        <input type="number" id="age" value="65" oninput="calcAll()">
+                        <input type="number" id="age" min="16" max="120" step="1" required value="65" oninput="calcAll()">
                     </div>
                     <div class="input-group">
                         <label>性別 (Sex)</label>
@@ -301,12 +309,27 @@
                     <div class="input-group">
                         <label>手術の種類 (Type of Surgery)</label>
                         <select id="mica_op" onchange="calcAll()">
-                            <option value="0.02" selected>ENT (耳鼻咽喉科)</option>
-                            <option value="1.6">Aortic (大動脈)</option>
-                            <option value="0.55">Vascular (血管系)</option>
-                            <option value="0.9">Thoracic (胸部)</option>
-                            <option value="0.4">Neurosurgery (脳神経)</option>
-                            <option value="0.14">General (一般外科)</option>
+                            <option value="0.71" selected>ENT・頭頸部（甲状腺・副甲状腺を除く）</option>
+                            <option value="0.18">甲状腺・副甲状腺</option>
+                            <option value="1.6">大動脈</option>
+                            <option value="0.86">末梢血管</option>
+                            <option value="0.4">胸部（心臓・食道を除く）</option>
+                            <option value="1.4">脳神経</option>
+                            <option value="-0.16">肛門・直腸（経肛門）</option>
+                            <option value="-0.25">肥満手術</option>
+                            <option value="-1.61">乳房</option>
+                            <option value="1.01">心臓</option>
+                            <option value="1.39">前腸・肝胆膵</option>
+                            <option value="0.59">胆嚢・虫垂・副腎・脾臓</option>
+                            <option value="1.14">腸管</option>
+                            <option value="0.76">産科・婦人科</option>
+                            <option value="0.8">整形外科</option>
+                            <option value="1.13">その他の腹部</option>
+                            <option value="0.54">皮膚</option>
+                            <option value="0.21">脊椎</option>
+                            <option value="-1.09">静脈</option>
+                            <option value="-0.26">泌尿器</option>
+                            <option value="0">ヘルニア</option>
                         </select>
                     </div>
                 </div>
@@ -349,9 +372,9 @@
                         <div class="input-group">
                             <label>予定手術時間</label>
                             <select id="op_duration" onchange="calcAll()">
-                                <option value="0">2時間未満</option>
-                                <option value="16">2 - 3時間</option>
-                                <option value="23">3時間以上</option>
+                                <option value="0">2時間以下</option>
+                                <option value="16">2時間超〜3時間以下</option>
+                                <option value="23">3時間超</option>
                             </select>
                         </div>
                     </div>
@@ -392,8 +415,8 @@
                             <label>手術時間 (HNSRI用)</label>
                             <select id="hnsri_optime" onchange="calcAll()">
                                 <option value="0">4時間未満</option>
-                                <option value="9">4 - 8時間</option>
-                                <option value="17">8時間以上</option>
+                                <option value="9">4時間以上〜8時間以下</option>
+                                <option value="17">8時間超</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -426,6 +449,7 @@
         <aside class="results-panel">
             <div class="card">
                 <h2>計算結果</h2>
+                <p id="validation_error" role="alert" style="color: var(--danger); margin-bottom: 12px;" hidden></p>
                 <div class="score-display">
                     <div class="score-row">
                         <span class="score-label">MICA Cardiac Risk</span>
@@ -456,16 +480,20 @@
                 <h3 style="font-size: 0.8rem; margin: 15px 0 5px;">貼り付け用サマリー</h3>
                 <div class="summary-box" id="summary_txt">準備中...</div>
                 
-                <button class="btn" onclick="copySummary()">サマリーをコピー</button>
+                <button class="btn" id="copy_btn" onclick="copySummary()">サマリーをコピー</button>
             </div>
             <p class="info-tip">
-                ※Gupta MICA/PRFは、原著のロジスティック回帰定数を用いて確率を算出しています。
+                改訂日: 2026-10-09。MICA係数は原著Table 2と照合済み。PRFはENT手術に固定され、MICAの手術選択には連動しません。PRF係数表・HN-CCIの重みは原著照合が未完了です。臨床判断の代替には使用しないでください。
             </p>
         </aside>
     </div>
 </div>
 
+<script id="app-data" type="application/json">
+{"mica":{"intercept":-5.25,"age":0.02,"asa":{"1":-5.17,"2":-3.29,"3":-1.92,"4":-0.95,"5":0},"functional":{"independent":0,"partially":0.65,"totally":1.03},"creatinineHigh":0.61},"source":"Gupta 2011 Table 2","verified":"2026-10-09"}
+</script>
 <script>
+    const clinicalData = JSON.parse(document.getElementById('app-data').textContent);
     function showTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -473,8 +501,34 @@
         event.currentTarget.classList.add('active');
     }
 
+    // 入力値は外部へ送信せず、ブラウザ内だけで計算します。
+    function validateInputs() {
+        const ageInput = document.getElementById('age');
+        const age = Number(ageInput.value);
+        if (ageInput.value.trim() === '' || !Number.isFinite(age) || !Number.isInteger(age) || age < 16 || age > 120 || !ageInput.validity.valid) {
+            return '年齢は16〜120歳の整数で入力してください。対象範囲外では計算しません。';
+        }
+        for (const select of document.querySelectorAll('select')) {
+            if (!Array.from(select.options).some(option => option.value === select.value)) {
+                return '選択項目を確認してください。未選択の項目があります。';
+            }
+        }
+        return '';
+    }
+
     function calcAll() {
-        const age = parseInt(document.getElementById('age').value) || 0;
+        const error = validateInputs();
+        const errorNode = document.getElementById('validation_error');
+        const copyButton = document.getElementById('copy_btn');
+        errorNode.textContent = error;
+        errorNode.hidden = !error;
+        copyButton.disabled = Boolean(error);
+        if (error) {
+            document.querySelectorAll('.score-value').forEach(node => node.innerText = '—');
+            document.getElementById('summary_txt').innerText = '入力内容を確認してください。計算結果は未確定です。';
+            return false;
+        }
+        const age = Number(document.getElementById('age').value);
         const asa = parseInt(document.getElementById('asa').value);
         const functional = document.getElementById('functional').value;
         
@@ -482,11 +536,11 @@
         // Constant: -5.25
         // Age: 0.02
         // Functional: indep:0, partial:0.65, total:1.03
-        // ASA: 1: -5.17, 2: -3.29, 3: -1.92, 4: -0.95, 5: -0.46
-        const mica_asa_coeffs = {1:-5.17, 2:-3.29, 3:-1.92, 4:-0.95, 5:-0.46};
-        const mica_func_coeffs = {independent:0, partially:0.65, totally:1.03};
-        let mica_x = -5.25 + (0.02 * age) + mica_func_coeffs[functional] + mica_asa_coeffs[asa] + parseFloat(document.getElementById('mica_op').value);
-        if(document.getElementById('cr_15').checked) mica_x += 0.61;
+        // ASA: 1: -5.17, 2: -3.29, 3: -1.92, 4: -0.95, 5: 0
+        const mica_asa_coeffs = clinicalData.mica.asa;
+        const mica_func_coeffs = clinicalData.mica.functional;
+        let mica_x = clinicalData.mica.intercept + (clinicalData.mica.age * age) + mica_func_coeffs[functional] + mica_asa_coeffs[asa] + parseFloat(document.getElementById('mica_op').value);
+        if(document.getElementById('cr_15').checked) mica_x += clinicalData.mica.creatinineHigh;
         const mica_prob = (1 / (1 + Math.exp(-mica_x))) * 100;
         document.getElementById('res_mica').innerText = mica_prob.toFixed(2) + "%";
 
@@ -548,6 +602,7 @@
         document.getElementById('res_hncci').innerText = hncci_score;
 
         updateSummary(mica_prob, rcri_score, rcri_class, prf_prob, aris_score, aris_risk, hnsri_score, hncci_score);
+        return true;
     }
 
     function updateSummary(mica, rcri, rcri_cl, prf, aris, aris_cl, hnsri, hncci) {
@@ -572,9 +627,10 @@
     }
 
     function copySummary() {
+        if (!calcAll()) return;
         const text = document.getElementById('summary_txt').innerText;
         navigator.clipboard.writeText(text).then(() => {
-            const btn = document.querySelector('.btn');
+            const btn = document.getElementById('copy_btn');
             const original = btn.innerText;
             btn.innerText = "コピーしました！";
             btn.style.background = "var(--success)";
@@ -582,6 +638,10 @@
                 btn.innerText = original;
                 btn.style.background = "var(--primary)";
             }, 2000);
+        }).catch(() => {
+            const error = document.getElementById('validation_error');
+            error.hidden = false;
+            error.textContent = 'コピーできませんでした。サマリーを選択して手動でコピーしてください。';
         });
     }
 

@@ -1,32 +1,33 @@
-# 🩺 ENT-RiskScorer-Preop
+# ENT-RiskScorer-Preop
 
-> [!INFO] ステータス: 稼働中
-> 頭頸部外科手術の術前リスク評価を迅速に行い、周術期管理の質を高めるための診療補助ツールです。
+HTML・CSS・JavaScriptだけで動作する術前スコア計算補助ツールです。`index.html`をブラウザで開いて利用します。
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+## 機能
+- MICA、RCRI、Gupta PRF、ARISCAT、HNSRI、HN-CCIの結果表示とテキストサマリーのコピー。
+- ASA-PS・年齢・機能状態などの入力に応じた更新。
+- 無効な入力では結果を消去し、コピーを停止。
+- アプリからの外部通信・患者入力の保存はありません。
 
-## 🚀 概要 (Overview)
-頭頸部外科手術を受ける患者の全身状態や局所所見に基づき、周術期の合併症リスクを多角的に評価します。特に高齢者や進行がん患者において、麻酔科・ICUとのスムーズな連携に必要な客観的データを提供します。
+## 2026-10-09の修正
+MICAのASA5を基準値0に修正し、手術分類21件の係数を原著Table 2に合わせました。曖昧な「一般外科」を廃止し、甲状腺・副甲状腺を独立させました。
 
-## ✨ 主な機能 (Key Features)
-- **多角的リスク評価**:
-    - 全身状態 (ASA PS)
-    - 呼吸器系: 喘息、COPD、上気道閉塞リスク
-    - 循環器系: RCRI (術前心リスク)
-    - 栄養・代謝: アルブミン値、糖尿病コントロール
-- **頭頸部特有の項目**: 挿管困難予測 (LEMON criteria等) や、気道確保計画の支援。
-- **瞬時の結果表示**: 入力内容に基づき、注意すべきリスクポイントをリアルタイムに強調表示。
-- **セキュアな設計**: ブラウザ完結型で、患者の個人情報を外部に送信することなく利用可能。
+ARISCATは「2時間以下／2時間超〜3時間以下／3時間超」、HNSRIは「4時間未満／4時間以上〜8時間以下／8時間超」です。
 
-## 🛠️ 技術スタック (Tech Stack)
-- **Frontend**: Vanilla HTML / CSS / JavaScript
-- **Framework**: なし (高速起動・依存性排除)
-- **UI Design**: Clean & Medical Interface
+年齢は整数16〜120歳を本アプリの入力範囲とします。下限はMICA原著の対象集団、上限は誤入力防止の運用上限で、モデルの適用保証ではありません。空欄・範囲外・小数・未選択では計算しません。
 
-## ⚙️ セットアップ (Setup)
-`index.html` をブラウザで開くだけで即座に開始できます。
+## 検証と限界
+MICA原著Table 2の公開済み丸め係数を使用します。原著本文の症例数値との小差は、丸め係数を用いるため生じます（70歳・ASA3・自立・正常Cr・脳手術: 表から1.25%、本文1.22%）。
 
----
-**Surgical Safety First** - 緻密な術前評価が、最善の術後結果を導く。
+PRFはENT手術固定で、MICA手術選択とは連動しません。PRF原著係数表とHN-CCIの重みの原著照合は未完了です。臨床判断の代替には使用しないでください。
+
+## 再検証
+`tests/browser-regression.cjs`はPlaywrightとChromeを使用し、架空入力だけで係数・年齢・時間区分・コピー・画面幅を確認します。
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright CHROME_PATH=/path/to/chrome node tests/browser-regression.cjs
+```
+
+## 根拠
+- [Gupta 2011: MICA Table 1・2](https://d1xe7tfg0uwul9.cloudfront.net/cbc-portal/wp-content/uploads/2013/08/062013-CIRC2.pdf)
+- [Canet 2010: ARISCAT Table 6](https://www.hospitaldelmar.cat/media/upload_web/pdf/article_Anesthesiology_editora_46_3389_1.pdf)
+- [Mascarella 2019: HNSRI Table 2](https://jamanetwork.com/journals/jamaotolaryngology/fullarticle/2725439)
